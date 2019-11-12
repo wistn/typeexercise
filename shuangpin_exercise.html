@@ -1,0 +1,186 @@
+<html>
+
+<head>
+    <title>全键盘双拼练习demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <style>
+        span {
+            margin-top: 10px;
+            margin-left: 10px;
+            margin-idright: 10px;
+            font-size: 20pt;
+            border: 1px solid gray;
+            padding-top: 5px;
+            padding-bottom: 5px;
+            padding-left: 10px;
+            padding-idright: 10px;
+            background: #fffff0;
+            border-width: 0 1px 1px 0;
+        }
+
+        .span1 {
+            color: red;
+            border: none;
+            padding: 0;
+            margin: 0;
+            background: silver;
+        }
+    </style>
+</head>
+
+<body bgcolor="silver" style="margin:0" scroll="no">
+    <div align="center" style="font-size:10pt;color:green">时间:<span class="span1" id="idtime">0</span>秒，正确:<span
+            class="span1" id="idright">0</span>个字母，错误:<span class="span1" id="iderror">0</span>个字母，正确率:<span
+            class="span1" id="idpercent">%</span>。速度:<span class="span1" id="idspeed">0</span>个正确汉字/秒</div>
+    <hr><br>
+    <center>
+        <span style="color:gray;font-weight:bold;font-size:30pt;padding:0px;" id="idtext0">XXX</span><br><br><span
+            style="color:silver;font-weight:bold;font-size:30pt;padding:0px;" id="idtext1">xx</span><br>
+        <span style="color:red;font-weight:bold;font-size:35pt;padding:0px;" id="idtext2">x</span>
+        <!--/-->
+        <br>电脑用户可直接敲键盘，手机用户要点击下框弹起系统英文输入法键盘后双指缩小屏幕再输入<input id="idinput" autofocus="autofocus" autocomplete="off">
+        <div align="center" style="border:1px dotted gray;padding:10px;width:100%;">
+            <span id="Q">Q</span><span id="W">W</span><span id="E">E</span><span id="R">R</span><span
+                id="T">T</span><span id="Y">Y</span><span id="U">U</span><span id="I">I</span><span id="O">O</span><span
+                id="P">P</span></span><br><br><br><br>
+            <span id="A">A</span><span id="S">S</span><span id="D">D</span><span id="F">F</span><span
+                id="G">G</span><span id="H">H</span><span id="J">J</span><span id="K">K</span><span
+                id="L">L</span><br><br><br><br>
+            <span id="Z">Z</span><span id="X">X</span><span id="C">C</span><span id="V">V</span><span
+                id="B">B</span><span id="N">N</span><span id="M">M</span>
+        </div>
+        <script language="javascript" src="pinyin_browser.js"></script>
+        <!--模块：汉字转为拼音字母的超小体积库 -->
+        <script language="javascript" src="getshuangpin.js"></script>
+        <!--模块：全拼字母转为双拼字母 -->
+        <script language="javascript">
+            var input, letterlen, inputisletter = false,
+                right0 = 0,
+                right1 = 0,
+                right2 = 0,
+                err0 = 0,
+                num = 0,
+                num2 = 0,
+                speed = 0; //right0是累计的字母答对数，right1是累计汉字答对数，right2是当前汉字中字母答对数。
+            var line0 = '你桌子上的书'.replace(/[^\u4e00-\u9fa5]/g, '').split(''); //本地存储的打字字母的一屏幕汉字，第二屏汉字要联网读取
+            var line2; //line0对应的字母数组
+            var paper = '';
+            var xhr = createXHR();
+            getpaper();
+            changeline();
+            newletter(true);
+            document.getElementById(letter).style.background = "pink";
+
+            function createXHR() {
+                if (window.XMLHttpRequest) {
+                    return new XMLHttpRequest();
+                } else {
+                    return new ActiveXObject('MicroSoft.XMLHTTP');
+                }
+            }
+
+            function getpaper() {
+                xhr.open('get', 'https://interface.meiriyiwen.com/article/random?dev=1', true);
+                xhr.send(null);
+            }
+
+            function changeline() {
+                idtext0.innerText = line0.join('');
+                line2 = [];
+                line0.forEach(function (item) {
+                    var letters = getshuangpin(pinyin.convertToPinyin(item, '-', true));
+                    letters.split('').forEach(function (item) {
+                        line2.push(item.toUpperCase());
+                    });
+                });
+            }
+
+            function newletter(newhanzi) {
+                if (newhanzi) {
+                    if (!line0.length) {
+                        if (paper.slice(0, 20).length < 20) {
+                            getpaper();
+                        }
+                        line0 = paper.slice(0, 10).split('');
+                        paper = paper.slice(10);
+                        changeline();
+                    }
+                    var hanzi = line0.shift();
+                    var letters = getshuangpin(pinyin.convertToPinyin(hanzi, '-', true)).toUpperCase();
+                    letterlen = letters.length;
+                    idtext1.innerText = hanzi + ' ' + letters;
+                    right2 = 0;
+                    newhanzi = false;
+                }
+                letter = line2.shift();
+                idtext2.innerText = letter;
+            }
+
+            xhr.onreadystatechange = function () {
+                //如果不用等于4判断一下，这个函数会执行四五次，也只有等于4的时候才是真的成功
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        paper = paper.concat(JSON.parse(xhr.responseText).data.content.replace(/[^\u4e00-\u9fa5]/g,
+                            ''));
+                        // 模块：读取网络文章
+                    }
+                }
+            }
+            document.onkeydown = function () {
+                input = String.fromCharCode(event.keyCode);
+                if (input == letter) {
+                    inputisletter = true;
+                    document.getElementById(input).style.background = "green";
+                    idright.innerText = (++right0);
+                    ++right2;
+                    if (right2 == letterlen) {
+                        newletter(true);
+                        ++right1;
+                    } else {
+                        newletter(false);
+                    }
+                } else if (input.match(/^[A-Z]$/i)) {
+                    document.getElementById(input).style.background = "gray";
+                    showerr.style.visibility = "visible";
+                    setTimeout("showerr.style.visibility='hidden'", 500);
+                    iderror.innerText = (++err0);
+                } else {
+                    showerr.style.visibility = "visible";
+                    setTimeout("showerr.style.visibility='hidden'",
+                        500);
+                    iderror.innerText = (++err0);
+                }
+            }
+            document.onkeyup = function () {
+                if (inputisletter) {
+                    document.getElementById(input).style.background = "#fffff0";
+                    document.getElementById(letter).style.background = "pink";
+                    inputisletter = false;
+                } else if (input.match(/^[A-Z]$/i)) {
+                    document.getElementById(input).style.background = "#fffff0";
+                } else {}
+                num = right0 + err0;
+                num2 = right0 / num;
+                num2 = num2 * 100;
+                num2 = Math.round(num2);
+                idpercent.innerText = num2 + "%";
+                speed = right1 / seconds;
+                speed = speed * 10;
+                speed = Math.round(speed);
+                speed = speed / 10;
+                idspeed.innerText = speed;
+            }
+            var seconds = 0;
+            setInterval("idtime.innerText=(++seconds)", 1000);
+        </script>
+        <br><br>
+        <hr>
+    </center>
+    <div style="position:absolute;z-index:100;filter:alpha(style=1,opacity=50) shadow(color=yellow,strength=100);color:maroon;font-size:95pt;font-weight:bold;top:40;left:0;width:100%;height:100%;visibility:hidden"
+        align="center" id="showerr">错误</div>
+    ↓<br>↓<br>
+    <p>文章随机，已去除标点符号。多音字只显示某一个发音；不用按大写键或shift键；键盘敲太快方块恢复默认颜色会跟不上。本页是我自定义的双拼方案。全拼输入练习demo<a href="quanpin_exercise.html">请点击这里。</a></p>
+</body>
+
+</html>
